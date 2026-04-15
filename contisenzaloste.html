@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Calcola in pochi secondi la media universitaria con target personalizzato: simula voti, CFU e margine per redditi di merito e borse di studio.">
+<meta name="keywords" content="calcolatore media universitaria, redditi di merito, borse di studio, media target, CFU, simulatore media, margine media">
+<meta name="author" content="Attilio Turco">
+<meta name="theme-color" content="#f5f4f0">
+<meta name="robots" content="index, follow">
+<meta name="geo.region" content="IT">
+<meta name="geo.placename" content="Italia">
+<link rel="canonical" href="https://username.github.io/">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<meta property="og:title" content="Simulatore Media Universitaria con Target">
+<meta property="og:description" content="Simula la media universitaria e verifica il margine per raggiungere target come 27. Utile per redditi di merito e borse di studio.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://username.github.io/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Simulatore Media Universitaria">
+<meta name="twitter:description" content="Calcola la tua media universitaria con target personalizzato, margine in tempo reale e supporto per redditi di merito.">
+<title>Simulatore Media Universitaria</title>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Simulatore Media Universitaria",
+  "description": "Simulatore gratuito per calcolare la media universitaria con target, margine e voto necessario.",
+  "inLanguage": "it-IT"
+}
+</script>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #9b9b96;
+    --green: #1D9E75;
+    --amber: #BA7517;
+    --red: #E24B4A;
+    --gold: #9B6F00;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+  h1 { font-size: 1.6rem; font-weight: normal; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 0.85rem; color: var(--text2); margin-bottom: 2rem; font-family: monospace; }
+  .container { max-width: 680px; margin: 0 auto; }
+  #setupScreen { display: block; }
+  #appScreen { display: none; }
+
+  /* SETUP */
+  .setup-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+  .setup-card h2 { font-size: 1rem; font-weight: normal; margin-bottom: 1.5rem; color: var(--text2); font-family: monospace; text-transform: uppercase; letter-spacing: 0.08em; }
+  .file-drop { border: 1.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; transition: background 0.15s; margin-bottom: 1rem; }
+  .file-drop:hover { background: var(--surface2); }
+  .file-drop input { display: none; }
+  .file-drop .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .file-drop .label { font-size: 0.9rem; color: var(--text2); }
+  .file-drop .fname { font-size: 0.85rem; color: var(--green); margin-top: 0.4rem; font-family: monospace; }
+  .divider { display: flex; align-items: center; gap: 12px; margin: 1rem 0; color: var(--text3); font-size: 0.78rem; font-family: monospace; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 0.5px; background: var(--border2); }
+  .field-row { display: flex; gap: 12px; margin-bottom: 1.25rem; }
+  .field { flex: 1; }
+  .field label { display: block; font-size: 0.75rem; color: var(--text2); margin-bottom: 6px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field select, .field input[type=number] { width: 100%; font-size: 1rem; padding: 0.6rem 0.8rem; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); appearance: none; font-family: 'Georgia', serif; }
+  .field select:focus, .field input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
+  .go-btn { width: 100%; padding: 0.85rem; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius-sm); font-size: 1rem; font-family: 'Georgia', serif; cursor: pointer; transition: opacity 0.15s; margin-bottom: 0.75rem; }
+  .go-btn:hover { opacity: 0.85; }
+  .go-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .manual-btn { width: 100%; padding: 0.85rem; background: transparent; color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-size: 1rem; font-family: 'Georgia', serif; cursor: pointer; transition: background 0.15s; }
+  .manual-btn:hover { background: var(--surface2); }
+  .error-msg { font-size: 0.82rem; color: var(--red); margin-top: 0.75rem; font-family: monospace; }
+
+  /* APP */
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 8px; flex-wrap: wrap; }
+  .top-bar-left { font-size: 0.82rem; color: var(--text2); font-family: monospace; }
+  .back-btn { font-size: 0.8rem; color: var(--text2); background: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 4px 12px; cursor: pointer; font-family: monospace; }
+  .back-btn:hover { background: var(--surface); }
+
+  .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  @media(min-width:500px) { .metrics { grid-template-columns: repeat(4, 1fr); } }
+  .metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0.8rem 1rem; }
+  .metric .mlabel { font-size: 0.7rem; color: var(--text3); margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric .mvalue { font-size: 1.5rem; font-weight: normal; }
+  .good { color: var(--green); }
+  .warn { color: var(--amber); }
+  .bad { color: var(--red); }
+
+  /* target row */
+  .target-row { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1rem; }
+  .target-row label { font-size: 0.78rem; color: var(--text2); white-space: nowrap; font-family: monospace; }
+  .target-val-input { font-size: 1.1rem; width: 52px; text-align: right; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--text); font-family: 'Georgia', serif; outline: none; }
+  .target-val-input:focus { border-bottom: 1px solid var(--border2); }
+
+  /* brain emoji slider — hide native thumb, overlay emoji */
+  .slider-wrap { flex: 1; position: relative; height: 32px; display: flex; align-items: center; }
+  .slider-wrap input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+    position: relative; z-index: 1;
+  }
+  .slider-wrap input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; cursor: pointer;
+    font-size: 22px; line-height: 28px; text-align: center;
+  }
+  .slider-wrap input[type=range]::-moz-range-thumb {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: transparent; cursor: pointer; border: none;
+  }
+  /* track fill via gradient updated by JS */
+  .slider-fill { position: absolute; left: 0; top: 50%; transform: translateY(-50%); height: 4px; border-radius: 2px; background: var(--text); pointer-events: none; z-index: 0; }
+  /* brain thumb overlay */
+  .brain-thumb {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    font-size: 20px; pointer-events: none; z-index: 2; line-height: 1;
+    filter: grayscale(0);
+    transition: left 0s;
+  }
+
+  .base-row { display: flex; gap: 10px; margin-bottom: 1.25rem; }
+  .base-field { flex: 1; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem 1rem; }
+  .base-field label { display: block; font-size: 0.7rem; color: var(--text3); margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; }
+  .base-field input { width: 100%; font-size: 1.2rem; background: transparent; border: none; color: var(--text); outline: none; font-family: 'Georgia', serif; }
+
+  .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
+  .list-title { font-size: 0.72rem; color: var(--text3); font-family: monospace; text-transform: uppercase; letter-spacing: 0.07em; }
+  .add-btn { font-size: 0.78rem; background: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 3px 12px; cursor: pointer; color: var(--text2); font-family: monospace; }
+  .add-btn:hover { background: var(--surface); }
+
+  .exams-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; }
+  .exam-row { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 0.8rem 1rem; }
+  .exam-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .exam-name { flex: 1; font-size: 0.92rem; background: transparent; border: none; color: var(--text); outline: none; font-family: 'Georgia', serif; }
+  .exam-name:focus { border-bottom: 1px solid var(--border2); }
+  .cfu-badge { font-size: 0.72rem; background: var(--surface2); border-radius: 20px; padding: 3px 10px; color: var(--text2); display: flex; align-items: center; gap: 4px; font-family: monospace; white-space: nowrap; }
+  .cfu-badge input { width: 28px; font-size: 0.72rem; background: transparent; border: none; border-bottom: 1px solid var(--border2); color: var(--text); text-align: center; outline: none; font-family: monospace; }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 1rem; padding: 0 2px; }
+  .del-btn:hover { color: var(--red); }
+
+  .exam-slider-row { display: flex; align-items: center; gap: 10px; }
+  .vote-num-wrap { min-width: 48px; text-align: center; }
+  .vote-num { font-size: 1.25rem; display: block; cursor: pointer; line-height: 1.5; }
+  .vote-num:hover { text-decoration: underline dotted; }
+  .vote-num-input { font-size: 1rem; width: 52px; text-align: center; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); outline: none; font-family: 'Georgia', serif; padding: 2px 4px; display: none; }
+  .vote-pts { font-size: 0.75rem; color: var(--text3); min-width: 48px; text-align: right; font-family: monospace; }
+
+  .progress-wrap { height: 4px; background: var(--surface2); border-radius: 2px; margin-bottom: 0.5rem; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.2s, background 0.2s; }
+  .hint { font-size: 0.78rem; color: var(--text2); font-family: monospace; min-height: 1.2em; margin-bottom: 1.5rem; }
+
+  /* ACCORDION STYLES */
+  .accordion-wrapper { margin-bottom: 1.5rem; }
+  .accordion-btn { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: left; font-family: 'Georgia', serif; font-size: 0.95rem; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: space-between; }
+  .accordion-btn:hover { background: var(--surface2); }
+  .accordion-btn .toggle { font-size: 0.8rem; color: var(--text3); transition: transform 0.2s; }
+  .accordion-btn.active .toggle { transform: rotate(180deg); }
+  .accordion-content { display: none; background: var(--surface); border: 0.5px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 1rem; font-size: 0.85rem; color: var(--text2); line-height: 1.5; }
+  .accordion-content.active { display: block; }
+  .accordion-content ul { margin-left: 1.2rem; margin-top: 0.5rem; }
+  .accordion-content li { margin-bottom: 0.3rem; }
+  .accordion-content code { background: var(--surface2); padding: 2px 6px; border-radius: 3px; font-family: monospace; color: var(--text); }
+
+  /* CSV TOOLTIP */
+  .csv-help-icon { display: inline-block; width: 18px; height: 18px; background: var(--text3); color: var(--surface); border-radius: 50%; text-align: center; line-height: 18px; font-size: 0.7rem; font-weight: bold; cursor: help; margin-left: 4px; position: relative; }
+  .csv-help-icon:hover::after { content: attr(data-help); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.75rem; white-space: nowrap; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-family: monospace; text-transform: none; letter-spacing: normal; }
+
+  /* DONATION POPUP */
+  .donation-popup { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 280px; z-index: 999; animation: slideIn 0.3s ease-out; display: none; }
+  .donation-popup.show { display: block; }
+  @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .donation-popup h3 { font-size: 0.85rem; color: var(--text); margin-bottom: 0.5rem; font-weight: normal; }
+  .donation-popup p { font-size: 0.78rem; color: var(--text2); line-height: 1.4; margin-bottom: 0.8rem; }
+  .donation-popup-btn { display: inline-block; background: var(--green); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; text-decoration: none; cursor: pointer; border: none; font-family: 'Georgia', serif; transition: opacity 0.15s; }
+  .donation-popup-btn:hover { opacity: 0.85; }
+  .donation-popup-close { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1rem; }
+  .donation-popup-close:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Media universitaria</h1>
+  <p class="subtitle">simulatore interattivo · voti pesati per CFU</p>
+  <div style="margin-bottom: 1.5rem; color: var(--text2); line-height: 1.7;">
+    <h2 style="font-size: 1.1rem; margin-bottom: 0.6rem; color: var(--text);">Calcola la media con un target preciso e valuta il margine</h2>
+    <p>Questo strumento ti aiuta a capire quale media dovrai mantenere nel semestre per raggiungere obiettivi come i <strong>redditi di merito</strong> o le <strong>borse di studio</strong>. Modifica i voti e i CFU in tempo reale per vedere come cambia la media proiettata e il margine di sicurezza.</p>
+  </div>
+
+  <!-- SETUP -->
+  <div id="setupScreen">
+    <!-- ACCORDION ESPLICATIVO -->
+    <div class="accordion-wrapper">
+      <button class="accordion-btn" id="infoAccordion">
+        <span>ℹ️ Come funziona questo simulatore?</span>
+        <span class="toggle">▼</span>
+      </button>
+      <div class="accordion-content" id="infoContent">
+        <p><strong>Lo scopo:</strong> Questo strumento simula le combinazioni di voti che puoi ottenere negli esami del semestre, permettendoti di capire:</p>
+        <ul>
+          <li>Quale media devi mantenere in questo semestre per raggiungere il tuo obiettivo</li>
+          <li>Qual è il margine tra il risultato proiettato e il tuo target</li>
+          <li>Come ogni voto contribuisce alla media finale (pesato per CFU)</li>
+        </ul>
+        <p><strong>Come funziona:</strong> Inserisci la tua media attuale e i CFU conseguiti, poi aggiungi gli esami del semestre. Modifica i voti simulati e vedi in tempo reale come cambiano la media proiettata e il margine di sicurezza.</p>
+        <p><strong>Il margine:</strong> È la differenza tra la media proiettata e il tuo target. Un margine positivo significa che probabilmente raggiungerai il tuo obiettivo; un margine negativo significa che devi migliorare i voti.</p>
+      </div>
+    </div>
+
+    <div class="setup-card">
+      <h2>Configura sessione</h2>
+
+      <button class="go-btn" onclick="avviaManuale()">🧠 Procedi inserendo gli esami →</button>
+
+      <div class="divider">oppure</div>
+
+      <div class="file-drop" onclick="document.getElementById('csvInput').click()">
+        <input type="file" id="csvInput" accept=".csv" onchange="handleFile(this)">
+        <div class="icon">📄</div>
+        <div class="label">Carica <strong>esami.csv</strong> (facoltativo per i prossimi accessi)</div>
+        <div class="fname" id="fileName"></div>
+        <span class="csv-help-icon" data-help="Colonne richieste: anno, semestre, nome attività, CFU; delimiter: ;">?</span>
+      </div>
+
+      <div class="field-row" id="csvFields" style="display:none">
+        <div class="field">
+          <label>Anno</label>
+          <select id="annoSelect">
+            <option value="">—</option>
+            <option>1</option><option>2</option><option>3</option>
+            <option>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Semestre</label>
+          <select id="semestreSelect">
+            <option value="">—</option>
+            <option>1</option><option>2</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="go-btn" id="goBtn" onclick="avvia()" disabled>Carica esami dal CSV →</button>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="accordion-wrapper" style="margin-top: 1.5rem;">
+        <button class="accordion-btn" id="csvHelpAccordion">
+          <span>📋 Struttura del CSV</span>
+          <span class="toggle">▼</span>
+        </button>
+        <div class="accordion-content" id="csvHelpContent">
+          <p><strong>Colonne obbligatorie:</strong></p>
+          <ul>
+            <li><code>anno</code> — Anno accademico (1, 2, 3, ...)</li>
+            <li><code>semestre</code> — Semestre (1 o 2)</li>
+            <li><code>nome attività formativa</code> — Nome dell'esame</li>
+            <li><code>CFU</code> — Crediti formativi (es. 6, 9, 12)</li>
+          </ul>
+          <p><strong>Formato:</strong> CSV con delimiter <code>;</code> (punto e virgola)</p>
+          <p><strong>Esami ignorati:</strong> "A scelta dello studente", "Tirocini...", "Prova finale"</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appScreen">
+    <div class="top-bar">
+      <span class="top-bar-left" id="sessionLabel"></span>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="https://paypal.me/attiliot" target="_blank" style="font-size: 0.8rem; color: var(--text2); text-decoration: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 4px 12px; cursor: pointer; transition: background 0.15s; font-family: monospace;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">☕ Supporta il progetto</a>
+        <button class="back-btn" onclick="goBack()">← cambia sessione</button>
+      </div>
+    </div>
+
+    <div class="base-row">
+      <div class="base-field">
+        <label>Media attuale</label>
+        <input type="number" id="currentAvg" value="27.50" step="0.01" min="18" max="33" oninput="trackModification();render()">
+      </div>
+      <div class="base-field">
+        <label>CFU già acquisiti</label>
+        <input type="number" id="currentCfu" value="120" min="0" oninput="trackModification();render()">
+      </div>
+    </div>
+
+    <div class="target-row">
+      <label>Obiettivo minimo:</label>
+      <div class="slider-wrap" id="targetSliderWrap">
+        <div class="slider-fill" id="targetFill"></div>
+        <input type="range" min="18" max="30" step="0.5" value="27" id="targetSlider" oninput="syncTargetFromSlider()">
+        <span class="brain-thumb" id="targetBrain">🧠</span>
+      </div>
+      <input type="text" class="target-val-input" id="targetInput" value="27.0"
+        onchange="syncTargetFromInput()" oninput="syncTargetFromInput()">
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="mlabel">Media proiettata</div><div class="mvalue" id="newAvg">—</div></div>
+      <div class="metric"><div class="mlabel">CFU semestre</div><div class="mvalue" id="semCfu">—</div></div>
+      <div class="metric"><div class="mlabel">Media sem. necessaria</div><div class="mvalue" id="minNeeded">—</div></div>
+      <div class="metric"><div class="mlabel">Margine</div><div class="mvalue" id="margin">—</div></div>
+    </div>
+
+    <div class="list-header">
+      <span class="list-title">Esami del semestre</span>
+      <button class="add-btn" onclick="addExam()">+ aggiungi</button>
+    </div>
+    <div class="exams-list" id="examsList"></div>
+
+    <div class="progress-wrap"><div class="progress-fill" id="progressBar" style="width:0%"></div></div>
+    <div class="hint" id="hintText"></div>
+  </div>
+
+</div>
+
+<!-- DONATION POPUP -->
+<div class="donation-popup" id="donationPopup">
+  <button class="donation-popup-close" onclick="closeDonationPopup()">✕</button>
+  <h3>💙 Ti piace questo tool?</h3>
+  <p>Se trovi utile questo simulatore, considera una piccola donazione per supportare lo sviluppo.</p>
+  <a href="https://paypal.me/attiliot" target="_blank" class="donation-popup-btn">Dona su PayPal →</a>
+</div>
+<script>
+const EXCLUDED = ['A scelta dello studente', 'Tirocini formativi e di orientamento', 'Per la prova finale'];
+let csvData = null;
+let exams = [];
+let modificationCount = 0;
+const DONATION_THRESHOLD = 15; // Mostra popup dopo 15 modifiche
+
+// ---- ACCORDION LOGIC ----
+function initAccordions() {
+  document.getElementById('infoAccordion').addEventListener('click', function() {
+    this.classList.toggle('active');
+    document.getElementById('infoContent').classList.toggle('active');
+  });
+  
+  document.getElementById('csvHelpAccordion').addEventListener('click', function() {
+    this.classList.toggle('active');
+    document.getElementById('csvHelpContent').classList.toggle('active');
+  });
+}
+
+function closeDonationPopup() {
+  document.getElementById('donationPopup').classList.remove('show');
+}
+
+function showDonationPopup() {
+  if (!sessionStorage.getItem('donationShown')) {
+    document.getElementById('donationPopup').classList.add('show');
+    sessionStorage.setItem('donationShown', 'true');
+  }
+}
+
+function trackModification() {
+  modificationCount++;
+  if (modificationCount === DONATION_THRESHOLD) {
+    showDonationPopup();
+  }
+}
+
+// ---- UTILS ----
+
+function voteToSlider(v) { return v === 33 ? 31 : v; }
+function sliderToVote(s) { return parseInt(s) === 31 ? 33 : parseInt(s); }
+function voteLabel(v) { return v === 33 ? '30L' : String(v); }
+
+/* ---- setup ---- */
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('fileName').textContent = file.name;
+  Papa.parse(file, {
+    header: true, delimiter: ';', skipEmptyLines: true,
+    complete: r => {
+      csvData = r.data;
+      document.getElementById('csvFields').style.display = 'flex';
+      checkReady();
+    },
+    error: () => { document.getElementById('errorMsg').textContent = 'Errore nella lettura del CSV.'; }
+  });
+}
+
+function checkReady() {
+  const a = document.getElementById('annoSelect').value;
+  const s = document.getElementById('semestreSelect').value;
+  document.getElementById('goBtn').disabled = !(csvData && a && s);
+}
+document.getElementById('annoSelect').addEventListener('change', checkReady);
+document.getElementById('semestreSelect').addEventListener('change', checkReady);
+
+function avvia() {
+  const anno = parseInt(document.getElementById('annoSelect').value);
+  const sem  = parseInt(document.getElementById('semestreSelect').value);
+  const errorEl = document.getElementById('errorMsg');
+  errorEl.textContent = '';
+  const filtered = csvData.filter(row =>
+    parseInt(row['anno']) === anno &&
+    parseInt(row['semestre']) === sem &&
+    !EXCLUDED.includes((row['ambito disciplinare'] || '').trim())
+  );
+  if (filtered.length === 0) {
+    errorEl.textContent = `Nessun esame trovato per anno ${anno}, semestre ${sem}.`;
+    return;
+  }
+  exams = filtered.map(row => ({
+    name: (row['nome attività formativa'] || 'Esame').trim(),
+    cfu: parseInt(row['CFU']) || 6,
+    vote: 27
+  }));
+  document.getElementById('sessionLabel').textContent = `Anno ${anno} · Semestre ${sem} · ${exams.length} esami`;
+  showApp();
+}
+
+function avviaManuale() {
+  exams = [{ name: 'Nome esame', cfu: 6, vote: 27 }];
+  document.getElementById('sessionLabel').textContent = 'Inserimento manuale';
+  showApp();
+}
+
+function showApp() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  render();
+  updateTargetBrain();
+}
+
+function goBack() {
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'block';
+}
+
+function addExam() {
+  exams.push({ name: 'Nome esame', cfu: 6, vote: 27 });
+  trackModification();
+  render();
+}
+
+/* ---- target slider ---- */
+function getTarget() { return parseFloat(document.getElementById('targetInput').value) || 27; }
+function getBaseAvg() { return parseFloat(document.getElementById('currentAvg').value) || 27; }
+function getBaseCfu() { return parseInt(document.getElementById('currentCfu').value) || 0; }
+
+function updateTargetBrain() {
+  const slider = document.getElementById('targetSlider');
+  const brain  = document.getElementById('targetBrain');
+  const fill   = document.getElementById('targetFill');
+  const wrap   = document.getElementById('targetSliderWrap');
+  const min = parseFloat(slider.min), max = parseFloat(slider.max), val = parseFloat(slider.value);
+  const pct = (val - min) / (max - min);
+  const thumbR = 14;
+  const wrapW = wrap.offsetWidth || 200;
+  const trackW = wrapW - thumbR * 2;
+  const px = thumbR + pct * trackW;
+  brain.style.left = px + 'px';
+  fill.style.width = px + 'px';
+}
+
+function syncTargetFromSlider() {
+  const v = parseFloat(document.getElementById('targetSlider').value);
+  document.getElementById('targetInput').value = v.toFixed(1);
+  updateTargetBrain();
+  trackModification();
+  render();
+}
+
+function syncTargetFromInput() {
+  let v = parseFloat(document.getElementById('targetInput').value);
+  if (isNaN(v)) return;
+  v = Math.min(30, Math.max(18, v));
+  document.getElementById('targetSlider').value = v;
+  updateTargetBrain();
+  trackModification();
+  render();
+}
+
+window.addEventListener('resize', updateTargetBrain);
+
+/* ---- render ---- */
+function render() {
+  const baseAvg = getBaseAvg();
+  const baseCfu = getBaseCfu();
+  const target  = getTarget();
+  const semCfu      = exams.reduce((s, e) => s + e.cfu, 0);
+  const semWeighted = exams.reduce((s, e) => s + e.vote * e.cfu, 0);
+  const totalCfu = baseCfu + semCfu;
+  const newAvg   = totalCfu > 0 ? (baseAvg * baseCfu + semWeighted) / totalCfu : baseAvg;
+  const minNeeded = semCfu > 0 ? (target * totalCfu - baseAvg * baseCfu) / semCfu : null;
+  const margin = newAvg - target;
+
+  document.getElementById('semCfu').textContent = semCfu;
+
+  const avgEl = document.getElementById('newAvg');
+  avgEl.textContent = newAvg.toFixed(2);
+  avgEl.className = 'mvalue ' + (newAvg >= target ? 'good' : 'bad');
+
+  const minEl = document.getElementById('minNeeded');
+  if (minNeeded === null)   { minEl.textContent = '—';    minEl.className = 'mvalue'; }
+  else if (minNeeded > 33)  { minEl.textContent = '>33';  minEl.className = 'mvalue bad'; }
+  else if (minNeeded > 30)  { minEl.textContent = '>30';  minEl.className = 'mvalue warn'; }
+  else if (minNeeded < 18)  { minEl.textContent = '<18';  minEl.className = 'mvalue good'; }
+  else { minEl.textContent = minNeeded.toFixed(2); minEl.className = 'mvalue ' + (minNeeded <= 27 ? 'good' : 'warn'); }
+
+  const marginEl = document.getElementById('margin');
+  marginEl.textContent = (margin >= 0 ? '+' : '') + margin.toFixed(2);
+  marginEl.className = 'mvalue ' + (margin >= 0 ? 'good' : 'bad');
+
+  const pct = Math.min(100, Math.max(0, ((newAvg - 18) / 15) * 100));
+  const bar = document.getElementById('progressBar');
+  bar.style.width = pct.toFixed(1) + '%';
+  bar.style.background = newAvg >= target ? 'var(--green)' : (newAvg >= target - 0.5 ? 'var(--amber)' : 'var(--red)');
+
+  const hint = document.getElementById('hintText');
+  if (minNeeded !== null && minNeeded > 33) {
+    hint.textContent = `Impossibile raggiungere ${target.toFixed(1)} neanche con 30L a tutti — abbassa il target.`;
+  } else if (minNeeded !== null && minNeeded > 30) {
+    hint.textContent = `Per raggiungere ${target.toFixed(1)} servono alcune lodi (media necessaria: ${minNeeded.toFixed(2)}).`;
+  } else if (minNeeded !== null && minNeeded <= 18) {
+    hint.textContent = `Anche con 18 a tutti superi il target. Ottimo!`;
+  } else if (minNeeded !== null) {
+    hint.textContent = `Per raggiungere ${target.toFixed(1)}, la media pesata di questo semestre deve essere almeno ${minNeeded.toFixed(2)}.`;
+  } else { hint.textContent = ''; }
+
+  renderExams();
+}
+
+function renderExams() {
+  const list = document.getElementById('examsList');
+  list.innerHTML = '';
+  exams.forEach((exam, i) => {
+    const isLode = exam.vote === 33;
+    const voteColor = isLode ? '#9B6F00' : exam.vote >= 28 ? 'var(--green)' : exam.vote >= 24 ? 'var(--amber)' : 'var(--red)';
+    const sliderVal = voteToSlider(exam.vote);
+    const pct = (sliderVal - 18) / (31 - 18);
+
+    const row = document.createElement('div');
+    row.className = 'exam-row';
+    row.innerHTML = `
+      <div class="exam-top">
+        <input class="exam-name" value="${exam.name}" onchange="trackModification();exams[${i}].name=this.value">
+        <span class="cfu-badge">CFU <input type="number" value="${exam.cfu}" min="1" max="20" onchange="trackModification();exams[${i}].cfu=parseInt(this.value)||1;render()"></span>
+        <button class="del-btn" onclick="trackModification();exams.splice(${i},1);render()">✕</button>
+      </div>
+      <div class="exam-slider-row">
+        <div class="vote-num-wrap">
+          <span class="vote-num" id="vn-${i}" style="color:${voteColor}" title="clicca per modificare" onclick="startEditVote(${i})">${voteLabel(exam.vote)}</span>
+          <input class="vote-num-input" id="vni-${i}" type="text" value="${voteLabel(exam.vote)}"
+            onblur="commitVoteEdit(${i})"
+            onkeydown="if(event.key==='Enter'){commitVoteEdit(${i});}if(event.key==='Escape'){cancelVoteEdit(${i});}">
+        </div>
+        <div class="slider-wrap" id="sw-${i}">
+          <div class="slider-fill" id="sf-${i}" style="width:0%"></div>
+          <input type="range" min="18" max="31" step="1" value="${sliderVal}" id="sr-${i}"
+            oninput="trackModification();exams[${i}].vote=sliderToVote(this.value);updateExamBrain(${i});render()">
+          <span class="brain-thumb" id="bt-${i}">🧠</span>
+        </div>
+        <span class="vote-pts" id="vp-${i}">${exam.vote * exam.cfu} pt</span>
+      </div>`;
+    list.appendChild(row);
+  });
+
+  /* position brains after DOM is ready */
+  exams.forEach((exam, i) => updateExamBrain(i));
+}
+
+function updateExamBrain(i) {
+  const slider = document.getElementById('sr-' + i);
+  const brain  = document.getElementById('bt-' + i);
+  const fill   = document.getElementById('sf-' + i);
+  const wrap   = document.getElementById('sw-' + i);
+  if (!slider || !brain || !wrap) return;
+  const min = 18, max = 31, val = parseInt(slider.value);
+  const pct = (val - min) / (max - min);
+  const thumbR = 14;
+  const wrapW = wrap.offsetWidth || 200;
+  const trackW = wrapW - thumbR * 2;
+  const px = thumbR + pct * trackW;
+  brain.style.left = px + 'px';
+  fill.style.width = px + 'px';
+}
+
+/* vote inline edit */
+function startEditVote(i) {
+  document.getElementById('vn-' + i).style.display = 'none';
+  const inp = document.getElementById('vni-' + i);
+  inp.style.display = 'inline-block';
+  inp.value = voteLabel(exams[i].vote);
+  inp.focus(); inp.select();
+}
+
+function commitVoteEdit(i) {
+  const inp = document.getElementById('vni-' + i);
+  const raw = inp.value.trim().toUpperCase().replace(' ', '');
+  let v;
+  if (raw === '30L' || raw === 'L') { v = 33; }
+  else { v = parseInt(raw); if (isNaN(v) || v < 18 || v > 30) v = exams[i].vote; }
+  exams[i].vote = v;
+  trackModification();
+  render();
+}
+
+function cancelVoteEdit(i) {
+  document.getElementById('vni-' + i).style.display = 'none';
+  document.getElementById('vn-' + i).style.display = 'block';
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', initAccordions);
+</script>
+</body>
+</html>
