@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://atturk.github.io/Simulatore-Media-Universitaria/sitemap.xml
