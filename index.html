@@ -83,6 +83,8 @@
   .top-bar-left { font-size: 0.82rem; color: var(--text2); font-family: monospace; }
   .back-btn { font-size: 0.8rem; color: var(--text2); background: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 4px 12px; cursor: pointer; font-family: monospace; }
   .back-btn:hover { background: var(--surface); }
+  .support-btn { font-size: 0.8rem; color: var(--text2); text-decoration: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 4px 12px; cursor: pointer; transition: background 0.15s, color 0.15s; font-family: monospace; }
+  .support-btn:hover { background: #003087; color: white; }
 
   .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.5rem; }
   @media(min-width:500px) { .metrics { grid-template-columns: repeat(4, 1fr); } }
@@ -98,6 +100,9 @@
   .target-row label { font-size: 0.78rem; color: var(--text2); white-space: nowrap; font-family: monospace; }
   .target-val-input { font-size: 1.1rem; width: 52px; text-align: right; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--text); font-family: 'Georgia', serif; outline: none; }
   .target-val-input:focus { border-bottom: 1px solid var(--border2); }
+  .target-row select,
+  .base-field select { width: 100%; font-size: 1rem; padding: 0.6rem 0.8rem; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); appearance: none; font-family: 'Georgia', serif; }
+  .lode-note { margin-top: 0.4rem; font-size: 0.78rem; color: var(--text2); font-family: monospace; }
 
   /* brain emoji slider — hide native thumb, overlay emoji */
   .slider-wrap { flex: 1; position: relative; height: 32px; display: flex; align-items: center; }
@@ -131,6 +136,8 @@
   .base-field { flex: 1; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem 1rem; }
   .base-field label { display: block; font-size: 0.7rem; color: var(--text3); margin-bottom: 4px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.05em; }
   .base-field input { width: 100%; font-size: 1.2rem; background: transparent; border: none; color: var(--text); outline: none; font-family: 'Georgia', serif; }
+  .lode-input-wrap { display: flex; align-items: center; gap: 0.5rem; }
+  .lode-warning { display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; color: #E24B4A; cursor: help; }
 
   .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; }
   .list-title { font-size: 0.72rem; color: var(--text3); font-family: monospace; text-transform: uppercase; letter-spacing: 0.07em; }
@@ -278,7 +285,7 @@
     <div class="top-bar">
       <span class="top-bar-left" id="sessionLabel"></span>
       <div style="display: flex; gap: 12px; align-items: center;">
-        <a href="https://paypal.me/attiliot" target="_blank" style="font-size: 0.8rem; color: var(--text2); text-decoration: none; border: 0.5px solid var(--border2); border-radius: 20px; padding: 4px 12px; cursor: pointer; transition: background 0.15s; font-family: monospace;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">☕ Supporta il progetto</a>
+        <a href="https://paypal.me/attiliot" target="_blank" class="support-btn">☕ Supporta il progetto</a>
         <button class="back-btn" onclick="goBack()">← cambia sessione</button>
       </div>
     </div>
@@ -291,6 +298,13 @@
       <div class="base-field">
         <label>CFU già acquisiti</label>
         <input type="number" id="currentCfu" value="120" min="0" oninput="trackModification();render()">
+      </div>
+      <div class="base-field">
+        <label>30 E LODE CORRISPONDE A:</label>
+        <div class="lode-input-wrap">
+          <input type="number" id="lodeValueInput" value="33" step="1" oninput="updateLodeValue()" onblur="trackModification();render()">
+          <span class="lode-warning" id="lodeValueWarning" title="il voto sembra anomalo, sei sicuro?" style="display:none;">⚠️</span>
+        </div>
       </div>
     </div>
 
@@ -328,7 +342,7 @@
 <div class="donation-popup" id="donationPopup">
   <button class="donation-popup-close" onclick="closeDonationPopup()">✕</button>
   <h3>💙 Ti piace questo tool?</h3>
-  <p>Se trovi utile questo simulatore, considera una piccola donazione per supportare lo sviluppo.</p>
+  <p>Se trovi utile questo simulatore, considera una piccola donazione per supportarmi!.</p>
   <a href="https://paypal.me/attiliot" target="_blank" class="donation-popup-btn">Dona su PayPal →</a>
 </div>
 <script>
@@ -336,7 +350,7 @@ const EXCLUDED = ['A scelta dello studente', 'Tirocini formativi e di orientamen
 let csvData = null;
 let exams = [];
 let modificationCount = 0;
-const DONATION_THRESHOLD = 15; // Mostra popup dopo 15 modifiche
+const DONATION_THRESHOLD = 30; // Mostra popup dopo 30 modifiche
 
 // ---- ACCORDION LOGIC ----
 function initAccordions() {
@@ -364,16 +378,53 @@ function showDonationPopup() {
 
 function trackModification() {
   modificationCount++;
-  if (modificationCount === DONATION_THRESHOLD) {
+  if (modificationCount >= DONATION_THRESHOLD) {
     showDonationPopup();
   }
 }
 
 // ---- UTILS ----
 
-function voteToSlider(v) { return v === 33 ? 31 : v; }
-function sliderToVote(s) { return parseInt(s) === 31 ? 33 : parseInt(s); }
-function voteLabel(v) { return v === 33 ? '30L' : String(v); }
+function getLodeValue() {
+  const input = document.getElementById('lodeValueInput');
+  if (!input) return 33;
+  const raw = input.value.trim();
+  if (raw === '') return 33;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 33;
+}
+
+function updateLodeValue() {
+  const warning = document.getElementById('lodeValueWarning');
+  const value = getLodeValue();
+  const isValid = [31, 32, 33].includes(value);
+  if (warning) {
+    warning.style.display = isValid ? 'none' : 'inline-flex';
+  }
+  render();
+}
+
+function getExamValue(exam) {
+  return exam.isLode ? getLodeValue() : exam.vote;
+}
+
+function voteToSlider(exam) {
+  return exam.isLode ? 31 : exam.vote;
+}
+
+function setExamSliderValue(i, s) {
+  const value = parseInt(s, 10);
+  if (value === 31) {
+    exams[i].isLode = true;
+  } else {
+    exams[i].isLode = false;
+    exams[i].vote = value;
+  }
+}
+
+function voteLabel(exam) {
+  return exam.isLode ? '30L' : String(exam.vote);
+}
 
 /* ---- setup ---- */
 function handleFile(input) {
@@ -416,14 +467,15 @@ function avvia() {
   exams = filtered.map(row => ({
     name: (row['nome attività formativa'] || 'Esame').trim(),
     cfu: parseInt(row['CFU']) || 6,
-    vote: 27
+    vote: 27,
+    isLode: false
   }));
   document.getElementById('sessionLabel').textContent = `Anno ${anno} · Semestre ${sem} · ${exams.length} esami`;
   showApp();
 }
 
 function avviaManuale() {
-  exams = [{ name: 'Nome esame', cfu: 6, vote: 27 }];
+  exams = [{ name: 'Nome esame', cfu: 6, vote: 27, isLode: false }];
   document.getElementById('sessionLabel').textContent = 'Inserimento manuale';
   showApp();
 }
@@ -441,7 +493,7 @@ function goBack() {
 }
 
 function addExam() {
-  exams.push({ name: 'Nome esame', cfu: 6, vote: 27 });
+  exams.push({ name: 'Nome esame', cfu: 6, vote: 27, isLode: false });
   trackModification();
   render();
 }
@@ -487,12 +539,12 @@ function syncTargetFromInput() {
 window.addEventListener('resize', updateTargetBrain);
 
 /* ---- render ---- */
-function render() {
+function renderSummary() {
   const baseAvg = getBaseAvg();
   const baseCfu = getBaseCfu();
   const target  = getTarget();
   const semCfu      = exams.reduce((s, e) => s + e.cfu, 0);
-  const semWeighted = exams.reduce((s, e) => s + e.vote * e.cfu, 0);
+  const semWeighted = exams.reduce((s, e) => s + getExamValue(e) * e.cfu, 0);
   const totalCfu = baseCfu + semCfu;
   const newAvg   = totalCfu > 0 ? (baseAvg * baseCfu + semWeighted) / totalCfu : baseAvg;
   const minNeeded = semCfu > 0 ? (target * totalCfu - baseAvg * baseCfu) / semCfu : null;
@@ -520,6 +572,13 @@ function render() {
   bar.style.width = pct.toFixed(1) + '%';
   bar.style.background = newAvg >= target ? 'var(--green)' : (newAvg >= target - 0.5 ? 'var(--amber)' : 'var(--red)');
 
+  const value = getLodeValue();
+  const warning = document.getElementById('lodeValueWarning');
+  const isValid = [31, 32, 33].includes(value);
+  if (warning) {
+    warning.style.display = isValid ? 'none' : 'inline-flex';
+  }
+
   const hint = document.getElementById('hintText');
   if (minNeeded !== null && minNeeded > 33) {
     hint.textContent = `Impossibile raggiungere ${target.toFixed(1)} neanche con 30L a tutti — abbassa il target.`;
@@ -530,17 +589,52 @@ function render() {
   } else if (minNeeded !== null) {
     hint.textContent = `Per raggiungere ${target.toFixed(1)}, la media pesata di questo semestre deve essere almeno ${minNeeded.toFixed(2)}.`;
   } else { hint.textContent = ''; }
+}
 
+function render() {
+  renderSummary();
   renderExams();
+}
+
+function updateExamRow(i) {
+  const exam = exams[i];
+  const actualVote = getExamValue(exam);
+  const voteColor = exam.isLode ? '#9B6F00' : actualVote >= 28 ? 'var(--green)' : actualVote >= 24 ? 'var(--amber)' : 'var(--red)';
+
+  const voteEl = document.getElementById('vn-' + i);
+  const ptsEl = document.getElementById('vp-' + i);
+  if (voteEl) {
+    voteEl.textContent = voteLabel(exam);
+    voteEl.style.color = voteColor;
+  }
+  if (ptsEl) {
+    ptsEl.textContent = `${actualVote * exam.cfu} pt`;
+  }
+}
+
+function handleExamSliderInput(i, value) {
+  setExamSliderValue(i, value);
+  updateExamBrain(i);
+  updateExamRow(i);
+  renderSummary();
+}
+
+function handleExamSliderChange(i, value) {
+  trackModification();
+  setExamSliderValue(i, value);
+  updateExamBrain(i);
+  updateExamRow(i);
+  renderSummary();
 }
 
 function renderExams() {
   const list = document.getElementById('examsList');
   list.innerHTML = '';
   exams.forEach((exam, i) => {
-    const isLode = exam.vote === 33;
-    const voteColor = isLode ? '#9B6F00' : exam.vote >= 28 ? 'var(--green)' : exam.vote >= 24 ? 'var(--amber)' : 'var(--red)';
-    const sliderVal = voteToSlider(exam.vote);
+    const actualVote = getExamValue(exam);
+    const isLode = exam.isLode;
+    const voteColor = isLode ? '#9B6F00' : actualVote >= 28 ? 'var(--green)' : actualVote >= 24 ? 'var(--amber)' : 'var(--red)';
+    const sliderVal = voteToSlider(exam);
     const pct = (sliderVal - 18) / (31 - 18);
 
     const row = document.createElement('div');
@@ -553,18 +647,18 @@ function renderExams() {
       </div>
       <div class="exam-slider-row">
         <div class="vote-num-wrap">
-          <span class="vote-num" id="vn-${i}" style="color:${voteColor}" title="clicca per modificare" onclick="startEditVote(${i})">${voteLabel(exam.vote)}</span>
-          <input class="vote-num-input" id="vni-${i}" type="text" value="${voteLabel(exam.vote)}"
+          <span class="vote-num" id="vn-${i}" style="color:${voteColor}" title="clicca per modificare" onclick="startEditVote(${i})">${voteLabel(exam)}</span>
+          <input class="vote-num-input" id="vni-${i}" type="text" value="${voteLabel(exam)}"
             onblur="commitVoteEdit(${i})"
             onkeydown="if(event.key==='Enter'){commitVoteEdit(${i});}if(event.key==='Escape'){cancelVoteEdit(${i});}">
         </div>
         <div class="slider-wrap" id="sw-${i}">
           <div class="slider-fill" id="sf-${i}" style="width:0%"></div>
           <input type="range" min="18" max="31" step="1" value="${sliderVal}" id="sr-${i}"
-            oninput="trackModification();exams[${i}].vote=sliderToVote(this.value);updateExamBrain(${i});render()">
+            oninput="handleExamSliderInput(${i}, this.value)" onchange="handleExamSliderChange(${i}, this.value)">
           <span class="brain-thumb" id="bt-${i}">🧠</span>
         </div>
-        <span class="vote-pts" id="vp-${i}">${exam.vote * exam.cfu} pt</span>
+        <span class="vote-pts" id="vp-${i}">${actualVote * exam.cfu} pt</span>
       </div>`;
     list.appendChild(row);
   });
@@ -594,17 +688,27 @@ function startEditVote(i) {
   document.getElementById('vn-' + i).style.display = 'none';
   const inp = document.getElementById('vni-' + i);
   inp.style.display = 'inline-block';
-  inp.value = voteLabel(exams[i].vote);
+  inp.value = voteLabel(exams[i]);
   inp.focus(); inp.select();
 }
 
 function commitVoteEdit(i) {
   const inp = document.getElementById('vni-' + i);
-  const raw = inp.value.trim().toUpperCase().replace(' ', '');
-  let v;
-  if (raw === '30L' || raw === 'L') { v = 33; }
-  else { v = parseInt(raw); if (isNaN(v) || v < 18 || v > 30) v = exams[i].vote; }
-  exams[i].vote = v;
+  const raw = inp.value.trim().toUpperCase().replace(/\s+/g, '');
+  const exam = exams[i];
+  if (raw === '30L' || raw === 'L') {
+    exam.isLode = true;
+  } else {
+    const v = parseInt(raw, 10);
+    if (!isNaN(v) && v >= 18 && v <= 30) {
+      exam.isLode = false;
+      exam.vote = v;
+    } else if (raw === '31' && getLodeValue() === 31) {
+      exam.isLode = true;
+    } else if (raw === '33' && getLodeValue() === 33) {
+      exam.isLode = true;
+    }
+  }
   trackModification();
   render();
 }
